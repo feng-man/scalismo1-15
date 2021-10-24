@@ -1,21 +1,14 @@
 package c2
 
 import java.awt.Color
-import scalismo.ui.api.ScalismoUI
+import scalismo.geometry._
+import scalismo.common._
 import scalismo.mesh.TriangleMesh
-import scalismo.io.{MeshIO, StatisticalModelIO}
-import scalismo.common.PointId
-import scalismo.mesh.TriangleId
-import scalismo.geometry.{Point3D, _3D}
-import scalismo.image.{DiscreteImage, DiscreteImage3D}
-import scalismo.statisticalmodel.PointDistributionModel
-import scalismo.geometry.Point
-import scalismo.geometry.EuclideanVector
-import scalismo.io.ImageIO
-import scalismo.geometry.{IntVector, IntVector3D}
-import scalismo.io.StatisticalModelIO
-import scalismo.ui.api.LandmarkView
-import scalismo.geometry.Landmark
+import scalismo.io.{LandmarkIO, MeshIO}
+import scalismo.ui.api._
+import scalismo.transformations._
+import scalismo.registration.LandmarkRegistration
+
 object c2 {
 
   def main(args: Array[String]) : Unit = {
@@ -31,66 +24,37 @@ object c2 {
     // create a visualization window
     val ui = ScalismoUI()
 
-    // read a mesh from file
-    //val mesh = MeshIO.readMesh(new File("data/facemesh.ply")).get
-    val mesh: TriangleMesh[_3D] = MeshIO.readMesh(new java.io.File("datasets/Paola.ply")).get
-    // display it
-    //val meshView = ui.show(mesh, "face")
     val paolaGroup = ui.createGroup("paola")
+    val mesh: TriangleMesh[_3D] = MeshIO.readMesh(new java.io.File("datasets/Paola.ply")).get
     val meshView = ui.show(paolaGroup, mesh, "Paola")
-    // change its color
-    meshView.color = Color.PINK
+    val flipTransform = Transformation((p: Point[_3D]) => Point3D(-p.x, p.y, p.z))
+    val pt: Point[_3D] = flipTransform(Point3D(1.0, 1.0, 1.0))
+    val translation = Translation3D(EuclideanVector3D(100, 0, 0))
+    val rotationCenter = Point3D(0.0, 0.0, 0.0)
+    val rotation: Rotation[_3D] = Rotation3D(0f, 3.14f, 0f, rotationCenter)
+    val pt2: Point[_3D] = rotation(Point(1, 1, 1))
+    // pt2: Point[_3D] = Point3D(-0.9984061838821647, 1.0, -1.0015912799070552)
+    val translatedPaola: TriangleMesh[_3D] = mesh.transform(translation)
+    val paolaMeshTranslatedView = ui.show(paolaGroup, translatedPaola, "translatedPaola")
+    val rigidTransform1 = CompositeTransformation(translation, rotation)
+    val rigidTransform2 : RigidTransformation[_3D] = TranslationAfterRotation3D(translation, rotation)
+    val paolaTransformedGroup = ui.createGroup("paolaTransformed")
+    val paolaTransformed = mesh.transform(rigidTransform2)
+    ui.show(paolaTransformedGroup, paolaTransformed, "paolaTransformed")
+    val landmarks : Seq[Landmark[_3D]] = LandmarkIO.readLandmarksJson3D(new java.io.File("landmarks.json")).get
+    val ptIds = Seq(PointId(2213), PointId(14727), PointId(8320), PointId(48182))
+    val paolaLandmarks = ptIds.map(pId => Landmark(s"lm-${pId.id}", mesh.pointSet.point(pId)))
+    val paolaTransformedLandmarks = ptIds.map(pId => Landmark(s"lm-${pId.id}", paolaTransformed.pointSet.point(pId)))
 
-    //val pointCloudView = ui.show(paolaGroup, mesh.pointSet, "pointCloud")
-    val p1: Point[_3D] = Point3D(4.0, 5.0, 6.0)
-    val p2: Point[_3D] = Point3D(1.0, 2.0, 3.0)
-
-    val v1: EuclideanVector[_3D] = Point3D(4.0, 5.0, 6.0) - Point3D(1.0, 2.0, 3.0)
-    val p3: Point[_3D] = p1 + v1
-    val v2: EuclideanVector[_3D] = p1.toVector
-    val v3: Point[_3D] = v1.toPoint
-    val pointList = Seq(
-      Point3D(4.0, 5.0, 6.0),
-      Point3D(1.0, 2.0, 3.0),
-      Point3D(14.0, 15.0, 16.0),
-      Point3D(7.0, 8.0, 9.0),
-      Point3D(10.0, 11.0, 12.0)
-    )
-    val vectors = pointList.map { p: Point[_3D] => p.toVector } // use map to turn points into vectors
-    val vectorSum = vectors.reduce { (v1, v2) => v1 + v2 } // sum up all vectors in the collection
-    val centerV: EuclideanVector[_3D] = vectorSum * (1.0 / pointList.length) // divide the sum by the number of points
-    val image: DiscreteImage[_3D, Short] = ImageIO.read3DScalarImage[Short](new java.io.File("datasets/PaolaMRI.vtk")).get
-    val imageView = ui.show(paolaGroup, image, "mri")
-
-    val origin: Point[_3D] = image.domain.origin
-    val spacing: EuclideanVector[_3D] = image.domain.spacing
-    val size: IntVector[_3D] = image.domain.size
-    val imagePoints: Iterator[Point[_3D]] = image.domain.pointSet.points.take(10)
-    val gridPointsView = ui.show(paolaGroup, imagePoints.toIndexedSeq, "imagePoints")
-    println(origin)
-    val values : Iterator[Short] = image.values
-    image.values.next
-    // res4: Short = 0
-    image(IntVector(0,0,0))
-    // res5: Short = 0
-    image.values.size == image.domain.pointSet.numberOfPoints
-
-    val threshValues = image.values.map { v: Short => if (v <= 300) v else 0.toShort }
-    val thresholdedImage: DiscreteImage[_3D, Short] = DiscreteImage3D[Short](image.domain, threshValues.toIndexedSeq)
-    ui show(paolaGroup, thresholdedImage, "thresh")
+    val paolaLandmarkViews = paolaLandmarks.map(lm => ui.show(paolaGroup, lm, s"${lm.id}"))
+    val paolaTransformedLandmarkViews = paolaTransformedLandmarks.map(lm => ui.show(paolaTransformedGroup, lm, lm.id))
 
 
-
-    val faceModel: PointDistributionModel[_3D, TriangleMesh] = StatisticalModelIO.readStatisticalTriangleMeshModel3D(new java.io.File("datasets/bfm.h5")).get
-    val faceModelView = ui.show(faceModel, "faceModel")
-
-    val randomFace: TriangleMesh[_3D] = faceModel.sample
-    val randfaceview = ui.show(randomFace, name = "mycode")
-
-    val matchingLandmarkViews : Seq[LandmarkView] = ui.filter[LandmarkView](paolaGroup, (l : LandmarkView) => l.name == "noseLM")
-    val matchingLandmarks : Seq[Landmark[_3D]] = matchingLandmarkViews.map(lmView => lmView.landmark)
-
-    val landmarkId : String = matchingLandmarks.head.id
-    val landmarkPosition : Point[_3D] = matchingLandmarks.head.point
+    val bestTransform : RigidTransformation[_3D] = LandmarkRegistration.rigid3DLandmarkRegistration(paolaLandmarks, paolaTransformedLandmarks, center = Point(0, 0, 0))
+    val transformedLms = paolaLandmarks.map(lm => lm.transform(bestTransform))
+    val landmarkViews = ui.show(paolaGroup, transformedLms, "transformedLMs")
+    val alignedPaola = mesh.transform(bestTransform)
+    val alignedPaolaView = ui.show(paolaGroup, alignedPaola, "alignedPaola")
+    alignedPaolaView.color = java.awt.Color.RED
   }
 }
