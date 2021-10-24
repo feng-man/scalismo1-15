@@ -1,0 +1,13 @@
+<component name="libraryTable">
+  <library name="sbt: ch.unibas.cs.gravis:scalismo-ui_2.13:0.90.0:jar">
+    <CLASSES>
+      <root url="jar://$USER_HOME$/AppData/Local/Coursier/cache/v1/https/repo1.maven.org/maven2/ch/unibas/cs/gravis/scalismo-ui_2.13/0.90.0/scalismo-ui_2.13-0.90.0.jar!/" />
+    </CLASSES>
+    <JAVADOC>
+      <root url="jar://$USER_HOME$/AppData/Local/Coursier/cache/v1/https/repo1.maven.org/maven2/ch/unibas/cs/gravis/scalismo-ui_2.13/0.90.0/scalismo-ui_2.13-0.90.0-javadoc.jar!/" />
+    </JAVADOC>
+    <SOURCES>
+      <root url="jar://$USER_HOME$/AppData/Local/Coursier/cache/v1/https/repo1.maven.org/maven2/ch/unibas/cs/gravis/scalismo-ui_2.13/0.90.0/scalismo-ui_2.13-0.90.0-sources.jar!/" />
+    </SOURCES>
+  </library>
+</component>
